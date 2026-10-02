@@ -51,15 +51,27 @@ Type: files; Name: "{app}\{#AppExe}.previous"
 
 [Code]
 var
-  ImportPage: TInputDirWizardPage;
+  ImportPage: TInputQueryWizardPage;
 
 procedure InitializeWizard;
 begin
-  ImportPage := CreateInputDirPage(wpSelectDir,
+  // This was a TInputDirWizardPage (CreateInputDirPage) before. That page
+  // type has its OWN built-in "must be a full path" validation that runs
+  // independently of -- and before -- anything in this script, and it
+  // rejects an empty field outright. That's incompatible with this field
+  // being genuinely optional ("leave blank for a new installation," per the
+  // text below): a silent install without /LEGACYDIR, or a real user
+  // correctly following that instruction and leaving it blank, would hit
+  // Inno's own validation error and abort before our NextButtonClick check
+  // below (which already correctly allows blank) ever gets a say.
+  // TInputQueryWizardPage has no such built-in requirement, so our own
+  // validation is the only validation that runs. The trade-off is losing
+  // the automatic "Browse..." folder-picker button that only the Dir page
+  // type provides -- this field now needs the path typed or pasted in.
+  ImportPage := CreateInputQueryPage(wpSelectDir,
     'Keep your existing settings', 'Optional: import from an older portable copy.',
-    'Already used the app? Close the old copy, then choose the folder containing its config.json and missile_ai folder. Leave blank for a new installation. Existing saved settings will not be overwritten.',
-    False, '');
-  ImportPage.Add('Previous app folder (optional):');
+    'Already used the app? Close the old copy, then enter the folder containing its config.json and missile_ai folder. Leave blank for a new installation. Existing saved settings will not be overwritten.');
+  ImportPage.Add('Previous app folder (optional):', False);
   ImportPage.Values[0] := ExpandConstant('{param:LEGACYDIR|}');
 end;
 
