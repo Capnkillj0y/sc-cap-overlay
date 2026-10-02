@@ -1,12 +1,33 @@
-"""Build the Windows EXE plus the checksum consumed by updater.py."""
+"""Build the Windows installer, update EXE, and their SHA-256 checksums."""
 import argparse
 import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 from updater import ASSET, sha256_file, valid_repo, version_tuple
+
+SETUP_ASSET = 'SC-Capacitor-Setup.exe'
+
+
+def build_installer(version):
+    compiler = shutil.which('ISCC.exe') or shutil.which('iscc')
+    if not compiler:
+        for base in (os.environ.get('ProgramFiles(x86)'), os.environ.get('ProgramFiles')):
+            if base:
+                candidate = Path(base)/'Inno Setup 6'/'ISCC.exe'
+                if candidate.is_file():
+                    compiler = str(candidate)
+                    break
+    if not compiler:
+        raise RuntimeError('Install Inno Setup 6 from https://jrsoftware.org/isinfo.php, or use the GitHub workflow.')
+    subprocess.run([compiler, '/DAppVersion='+version, str(Path('installer/setup.iss').resolve())], check=True)
+    setup = Path('dist')/SETUP_ASSET
+    if not setup.is_file():
+        raise RuntimeError('Installer build did not produce '+SETUP_ASSET)
+    Path(str(setup)+'.sha256').write_text(sha256_file(setup)+'  '+SETUP_ASSET+'\n', encoding='ascii')
 
 
 def main():
@@ -31,6 +52,7 @@ def main():
         exe=Path('dist')/ASSET
         if not exe.is_file(): raise RuntimeError('Build did not produce the release executable.')
         Path(str(exe)+'.sha256').write_text(sha256_file(exe)+'  '+ASSET+'\n',encoding='ascii')
+        build_installer(version)
     Path('release-info.json').write_text(json.dumps({'version':version,'tag':'v'+version}),encoding='utf-8')
     print('Release version: v'+version)
 

@@ -1,162 +1,116 @@
-# Put SC Capacitor Overlay on GitHub and publish updates
+# Publish SC Capacitor Overlay v1.2.0
 
-This package is version **1.1.4**. The updater was introduced in **1.1.0**.
-If you already published an earlier version, copy this package's contents into your existing
-repository, commit and push the changes, then run Build Windows release. Test
-and publish the new v1.1.4 draft. Your installed app can then update to it.
-The first-time setup examples below describe the original 1.1.0 release.
+This version adds a Windows installer and central settings storage. The Flight
+icon, rounded window, keyboard fix and automatic updates are included.
 
-A repository stores your source code. A commit saves a named snapshot on your PC.
-A push uploads those commits to GitHub. A release distributes the finished EXE.
-**Pushing source changes does not update installed copies: publish a new release.**
+## Update your existing GitHub repository
 
-The supplied updater uses a **public GitHub repository**. Users do not need a
-GitHub account or token to check or download releases. A private repository would
-need a different authenticated distribution setup.
+1. Extract this ZIP outside your repository.
+2. In GitHub Desktop, choose **Repository → Show in Explorer**.
+3. Copy the extracted inner app folder's contents into that repository folder.
+   Replace existing files. Include `.github`, `installer`, `assets`, and `tests`.
+4. In Desktop, enter **Add Windows installer and centralized settings** in Summary.
+5. Click **Commit to main** (or your branch name), then **Push origin**.
+6. On the GitHub website, open **Actions → Build Windows release → Run workflow**.
+7. Wait for a green check. The Windows runner tests the EXE, installer, shortcuts,
+   settings migration, reinstall, and data preservation after uninstall.
+8. Open **Code → Releases → v1.2.0 draft**.
 
-## 1. Create your account and install GitHub Desktop
+Do not rerun a successful build for the same version while its release exists.
+Use a new version for another release, or delete an unpublished failed draft
+before retrying that version.
 
-1. Create/sign in to your account at https://github.com.
-2. Install GitHub Desktop from https://desktop.github.com/download/.
-3. Open GitHub Desktop and sign in to GitHub.com.
-4. In Desktop, choose **File → New repository**.
-5. Name it **sc-cap-overlay**. Use **Documents/GitHub** as the local parent path.
-   Desktop creates the folder `Documents/GitHub/sc-cap-overlay` for you.
-6. Leave the license unselected for now unless you have chosen how to license your
-   code. A public repository makes the code visible; it does not automatically
-   grant a broad open-source license.
-7. Click **Create repository**.
+## Test the installer before publishing
 
-## 2. Copy this app into that repository
+1. Download **SC-Capacitor-Setup.exe** from the draft.
+2. Close every old copy of the app.
+3. Run Setup and choose the program location (the default is recommended).
+4. If your settings still live beside your old EXE, choose that old folder on
+   **Keep your existing settings**. Otherwise leave this optional field blank.
+5. Keep **Create a desktop shortcut** checked if you want one, then install.
+6. Launch from the new shortcut. Confirm the Flight icon and version 1.2.0.
+7. Confirm calibration, hotkeys and AI data survived the import. Test monitoring.
+8. Check minimize/restore, the rounded corners and the UPDATES button.
+9. Open **SC Capacitor Settings Folder** from Start to inspect the data location.
+10. Publish the draft as a normal latest release after testing.
 
-1. Extract this ZIP outside your repository first.
-2. Open the extracted inner `sc-cap-overlay` folder.
-3. Copy its **contents**, including `.github`, `.gitignore`, `tests`, and the Python
-   files, into `Documents/GitHub/sc-cap-overlay`.
-4. Verify `sc_capacitor_ocr.py` sits directly inside the repository folder. Do not
-   accidentally nest it as `sc-cap-overlay/sc-cap-overlay/sc_capacitor_ocr.py`.
-5. GitHub Desktop should list the changed files. Enter **Initial Glass Cockpit release**
-   in the Summary field and click **Commit to main** (or your current branch name).
-6. Click **Publish repository**. Uncheck **Keep this code private** for this updater
-   setup, then click **Publish repository**.
+The draft contains FOUR assets:
 
-The included `.gitignore` excludes local calibration, AI training data, logs,
-build environments and `dist`. Commit the source and assets; the workflow creates
-the release EXE separately. Do not copy old `dist`/`build_env` folders into this package.
+| File | Purpose |
+| --- | --- |
+| SC-Capacitor-Setup.exe | Recommended download for installing the app |
+| SC-Capacitor-Setup.exe.sha256 | Installer checksum |
+| SC_Capacitor_Overlay.exe | Required by existing in-app updaters |
+| SC_Capacitor_Overlay.exe.sha256 | Required by existing in-app updaters |
 
-## 3. Let GitHub build your first Windows release
+Keep the exact filenames and all four assets. Pushing code alone does not update
+installed copies; publishing the release makes it available to the updater.
 
-1. In Desktop choose **Repository → View on GitHub**.
-2. Open the **Actions** tab on the website. Enable workflows if prompted.
-3. Select **Build Windows release** in the left sidebar.
-4. Click **Run workflow**, leave the default branch selected, then **Run workflow**.
-5. Wait for the run to finish with a green check. Open it to see progress or errors.
+## Where files live
 
-The workflow installs Python on a Windows runner, runs updater tests, builds the
-EXE and its SHA-256 checksum, and checks that the EXE stays open during startup.
-It reads the version from `sc_capacitor_ocr.py`, embeds your repository name into
-the EXE automatically, and creates a **draft** release with both assets attached.
-No personal access token is needed; GitHub supplies the workflow's temporary token.
+- Program files default to `%LOCALAPPDATA%\Programs\SC Capacitor Overlay`.
+- All user data lives in `%LOCALAPPDATA%\SC Capacitor Overlay`.
+- `config.json`: calibration, hotkeys and overlay preferences.
+- `update_settings.json`: saved updater preferences, if customized previously.
+- `missile_ai`: training samples and model files.
+- Logs, calibration debug image and migration state live in the same data folder.
 
-## 4. Review and publish the first release
+Program location is selectable. The per-user settings location stays stable so
+updates and reinstalls do not scatter or replace personal data. Setup normally
+needs no administrator access. Uninstall via Windows Installed apps removes the
+program and shortcuts but retains the data folder. Close the app and manually
+delete that folder if you want to remove personal data too.
 
-1. Return to the repository's **Code** tab and open **Releases**.
-2. Open/edit the new **v1.1.0** draft. Add a short description of the changes.
-3. Confirm these two assets are attached:
-   - `SC_Capacitor_Overlay.exe`
-   - `SC_Capacitor_Overlay.exe.sha256`
-4. Download the EXE from the draft and try opening it on your Windows PC. Check
-   calibration, monitoring and the UPDATES button before distributing it.
-5. Keep it as a normal release, not a prerelease. Select **Set as latest release**
-   if that option is shown, then **Publish release**.
-6. Share the release page with your users. They download **SC_Capacitor_Overlay.exe**,
-   not GitHub's automatically generated “Source code” ZIP.
+## Existing portable copies and auto-updates
 
-Your current v1.0.6 EXE does not contain an updater. Replace it manually with this
-first v1.1.0 release once. Keep `config.json` and the `missile_ai` folder beside the
-new EXE to retain calibration and learned samples. Future releases can update
-through the app. Tesseract OCR is still a separate prerequisite.
+Updating an old EXE to 1.2.0 automatically imports missing settings from beside
+that EXE into the central data folder. Original files are left intact. Migration
+is recorded so resetting your settings does not import old calibration again.
+When installing into a different folder, Setup's optional import page lets you
+point to the old folder. Existing central settings are never overwritten and
+separate AI datasets are not mixed.
 
-## 5. Push a future update
+Run Setup once for desktop/Start shortcuts and an Installed apps entry. Future
+in-app updates replace only the EXE in the installation folder, retain settings,
+and refresh the Installed apps version on launch. Keep the standalone EXE assets
+in every release for compatibility with older updaters. If a future version needs
+more installed files, update the release/updater design before distributing it.
 
-For example, to publish version 1.1.1:
+## First-time GitHub setup
 
-1. Edit the app files inside your repository folder. If I give you updated source,
-   copy the changed files into this same folder; keep its `.git` directory intact.
-2. Near the top of `sc_capacitor_ocr.py`, change:
-   ```python
-   __version__ = "1.1.0"
-   ```
-   to:
-   ```python
-   __version__ = "1.1.1"
-   ```
-3. Open GitHub Desktop and review the changed files.
-4. Write a short Summary, such as **Fix capacitor reading**, and click **Commit to main**.
-5. Click **Push origin**. This uploads the source changes.
-6. On GitHub repeat **Actions → Build Windows release → Run workflow**.
-7. Review/test the **v1.1.1** draft, add release notes and publish it as the latest
-   normal release.
+Create a GitHub account and install GitHub Desktop. Choose **File → New repository**,
+name it `sc-cap-overlay`, and copy the contents of this package into its folder.
+Commit, then **Publish repository** with **Keep this code private** unchecked.
+Use the build/release steps above. The workflow automatically embeds your
+repository name in the app; users do not enter a GitHub link.
 
-Use a new three-part version every time: 1.1.0, 1.1.1, 1.1.2, 1.2.0, and so on.
-Do not reuse a published version number or replace a published release's assets.
-A failed unpublished draft can be deleted before rerunning the same version.
+## Future releases
 
-## What users see
+Change `__version__` near the top of `sc_capacitor_ocr.py` to a new three-part
+version, for example `1.2.1`. Commit, push, run the workflow, test the draft, and
+publish. Do not reuse a published version tag.
 
-- A startup check runs in the background when the repository is configured.
-- No automatic prompt interrupts active monitoring or calibration; it waits until
-  those end. Offline/rate-limit errors do not stop the app.
-- When a newer complete release exists, the app offers to download it.
-- After verifying its SHA-256 checksum, it asks to close, install and restart.
-- A separate helper waits for the running EXE to exit, replaces only that EXE,
-  then launches the new version. Configuration and AI data are not replaced.
-- The old EXE is retained beside it as `SC_Capacitor_Overlay.exe.previous`.
-- The **UPDATES** button performs a manual check directly. GitHub builds embed
-  the repository automatically; no repository prompt is shown. Existing startup
-  preferences are retained in update_settings.json.
+## Local builds and troubleshooting
 
-The checksum detects a corrupted/mismatched download; it is not a publisher's
-code-signing certificate. Releases are trusted from the configured repository.
-Source/Python installations check for new releases but use GitHub Desktop/pull
-for installation. Automatic replacement is for the built Windows EXE.
+Local Windows builds require Python 3.12 and [Inno Setup 6](https://jrsoftware.org/isinfo.php).
+Set `repository` in `update_config.json` to your `username/repository`, then run
+`build.bat`. The build stops if the EXE or installer fails. Upload all four files
+from `dist` if publishing manually. GitHub's Windows runner already includes
+Inno Setup and embeds the repository automatically.
 
-## If you prefer to build releases on your own PC
+If import fails, the app explains the problem and leaves old files untouched;
+restore access to the old folder and launch again. A failed download verification
+never replaces the running EXE. Failed update diagnostics are in
+`.sc-update-*/update-error.txt` beside the program; the previous EXE is retained
+as `.exe.previous`. Choose a writable installation folder for in-app updates.
 
-Set `repository` in `update_config.json` to `YOUR_USERNAME/sc-cap-overlay`, then
-run `build.bat`. It produces both required assets in `dist`. Commit/push the source,
-create a GitHub release with the matching `v1.1.0` tag, attach both files, and
-publish. You can skip the GitHub Actions build when following this manual path.
+Local automated tests cover settings migration, non-overwrite behavior, retry
+safety, reset behavior, hotkeys and updates. The new Windows installer workflow
+must still complete in your repository; then manually review setup and shortcuts.
 
-## Troubleshooting
+## Official documentation
 
-- **No Run workflow button:** `.github/workflows/windows-release.yml` must be in
-  the repository's default branch at the top level. Ensure it was committed/pushed.
-- **Red workflow result:** open the failed step's log. No completed release should
-  be published until the build and startup check pass.
-- **No public release found:** verify the repository spelling and that the release
-  is published, not a draft/private/prerelease.
-- **Up to date when you expected an update:** increment `__version__`, push it,
-  build the new draft, and publish it as latest.
-- **Cannot write/update EXE:** keep the app in a folder you can write to, such as
-  `Documents/SC Capacitor`, rather than Program Files. The updater does not request
-  administrator access.
-- **Install failed:** the old EXE or its `.previous` backup remains available.
-  Diagnostics are in `.sc-update-*/update-error.txt` beside the app. A failed
-  checksum never replaces the running EXE.
-
-## Verification in this delivery
-
-Updater unit tests cover version ordering, incomplete releases, URL restrictions,
-checksum rejection, preserving configuration, and rollback on replacement errors.
-The UI smoke checks passed with the added controls. The GitHub workflow and full
-Windows EXE replacement cycle must still be exercised on your repository/PC.
-For an end-to-end trial, install v1.1.0, publish a small v1.1.1 change, then use
-UPDATES in v1.1.0 to test download, restart and retained calibration.
-
-## Official GitHub guides
-
-- https://docs.github.com/en/desktop/overview/creating-your-first-repository-using-github-desktop
-- https://docs.github.com/en/desktop/making-changes-in-a-branch/pushing-changes-to-github-from-github-desktop
-- https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow
+- https://docs.github.com/en/desktop/adding-and-cloning-repositories/adding-an-existing-project-to-github-using-github-desktop
+- https://docs.github.com/en/actions/managing-workflow-runs/manually-running-a-workflow
 - https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository
+- https://jrsoftware.org/ishelp/

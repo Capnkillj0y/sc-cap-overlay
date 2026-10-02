@@ -1,4 +1,33 @@
-# Glass Cockpit · v1.1.4
+# Glass Cockpit · v1.2.0
+
+## Windows installer in 1.2.0
+
+Download **SC-Capacitor-Setup.exe** from Releases. Setup lets you choose the
+program folder, creates a Start menu shortcut, and offers a desktop shortcut
+using the Flight icon. The app appears in Windows Installed apps for uninstall.
+The default installation is per-user and does not request administrator access.
+
+All calibration, hotkeys, preferences, logs and AI training data now live in:
+
+```text
+%LOCALAPPDATA%\SC Capacitor Overlay
+```
+
+Paste that path into File Explorer, or use **SC Capacitor Settings Folder** in
+the Start menu. Program files default to `%LOCALAPPDATA%\Programs\SC Capacitor Overlay`.
+Updates preserve the data folder. Uninstall removes the program and shortcuts
+but keeps personal data for reinstall; delete that settings folder yourself
+with the app closed if you want a full reset.
+
+**Existing users:** close the old app and run Setup once. On the optional import
+page, select the old app folder containing `config.json` and `missile_ai`. Import
+runs on first launch, copies missing data, and leaves the originals unchanged.
+If you previously updated to 1.2.0 using the in-app updater, your data is already
+centralized. An in-app update alone does not create installation shortcuts; run
+Setup once for those. Future in-app updates continue working normally.
+
+Tesseract OCR is still a separate dependency; the app's existing OCR setup flow
+handles it when required. This installer does not bundle another OCR engine.
 
 ## Flight icon in 1.1.4
 
@@ -64,8 +93,8 @@ python sc_capacitor_ocr.py
 ```
 
 Keep `glass_skin.py` and `glass_cockpit_skin.png` beside the main script when
-running from source. Copy your existing `config.json` and `missile_ai` training
-folder next to the version you launch to retain calibration and training data.
+running from source. On Windows, settings use the central folder described above.
+A first launch imports missing data found beside an older EXE or source copy.
 
 Drag the top bar to move the window. Its top-right controls minimize, maximize,
 and close it. Double-click the top bar to maximize/restore. Drag the bottom-right
@@ -288,8 +317,8 @@ value is adapting to *your* screen and giving a second opinion. It starts
 from synthetic examples built from the bundled templates and improves as real
 data arrives.
 
-**Privacy / performance.** Everything lives in a `missile_ai` folder next to
-the app and is never uploaded. It checks about 3 times a second at lower
+**Privacy / performance.** Training data lives in `missile_ai` inside the central
+settings folder and is never uploaded. It checks about 3 times a second at lower
 thread priority (roughly 5% of one core). Delete the folder to reset it, or
 flip **MISSILE AI** off to stop collecting.
 
@@ -308,8 +337,7 @@ Open the app and click CALIBRATE again — the box-and-threshold step shows
 you exactly what number(s) it's picking up before you save, so you'll know
 right away if the box needs adjusting.
 
-Two files may appear next to the app if something goes wrong, for
-troubleshooting:
+Two files may appear in the central settings folder for troubleshooting:
 - **`app_log.txt`** — general activity log
 - **`error_log.txt`** — only appears if something actually crashed
 
@@ -329,31 +357,21 @@ background with just its own window.
 - Capacitor OCR runs at up to 8 checks/sec; missile detection (if enabled)
   runs independently at up to 16 checks/sec, since it needs to react faster.
 - Everything (position, size, colors, opacity, alert duration, threshold,
-  missile settings) is saved in a small `config.json` file next to the app
-  (and any missile-AI data in a `missile_ai` folder beside it).
+  missile settings) is saved in `config.json` in the central settings folder
+  (and missile-AI data in its `missile_ai` subfolder).
   Deleting it just means you'll be asked to calibrate again next time.
 
 ---
 
 ## Releases & updates (for the maintainer)
 
-The app reports its own version (`__version__` near the top of
-`sc_capacitor_ocr.py`, and in the window title). To ship an update:
+Follow [GITHUB_WALKTHROUGH.md](GITHUB_WALKTHROUGH.md). Change `__version__`, commit
+and push, then run **Build Windows release** in GitHub Actions. The workflow
+builds the EXE and installer, tests installation/migration/uninstallation on
+Windows, and creates a draft release with four assets. Review and test it before
+publishing. New users download Setup; existing app versions use the separate
+EXE/checksum assets for automatic updates, so keep all four release assets.
 
-1. Bump `__version__`.
-2. Rebuild with `build.bat`.
-3. Commit, tag, and push:
-   ```
-   git add -A
-   git commit -m "v1.1.0 - what changed"
-   git tag v1.1.0
-   git push && git push --tags
-   ```
-4. On GitHub, go to **Releases → Draft a new release**, pick the tag you just
-   pushed, and attach the built `SC_Capacitor_Overlay.exe` from `dist/`.
-
-Auto-update isn't built yet, but this is deliberately set up for it: a future
-version can check `https://api.github.com/repos/<you>/<repo>/releases/latest`
-on startup, compare the returned tag to `__version__`, and prompt if a newer
-one exists. That only needs your GitHub username/repo name once you've
-created it -- ask to have it wired in whenever you're ready.
+To build locally, install Python 3.12 and Inno Setup 6, then run `build.bat`.
+Windows installation and icon appearance still need your manual review of the
+first installer release; Linux checks cannot validate Windows shell behavior.

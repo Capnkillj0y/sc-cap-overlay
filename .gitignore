@@ -29,3 +29,9 @@ update_settings.tmp
 .sc-update-*/
 *.exe.previous
 release-info.json
+
+# Local settings migration state
+migration-state.json
+migration-state.tmp
+migration-source.txt
+.migration-*/

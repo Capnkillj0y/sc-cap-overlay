@@ -19,7 +19,7 @@ RUN
   python sc_capacitor_ocr.py
 """
 
-__version__ = "1.1.4"  # bump this before publishing each GitHub release
+__version__ = "1.2.0"  # bump this before publishing each GitHub release
 
 import sys
 # Run the separate replacement helper before loading OCR/Tk or the application.
@@ -64,12 +64,13 @@ try:
 except Exception:
     missile_ai = None
 
+from data_paths import initialize_data_dir, refresh_installed_version
+_DATA_DIR, _DATA_WARNINGS = initialize_data_dir()
+
+
 def app_dir():
-    """Folder to read/write config & logs -- the exe's own folder when frozen,
-    otherwise the folder this script lives in."""
-    if getattr(sys, "frozen", False):
-        return os.path.dirname(os.path.abspath(sys.executable))
-    return os.path.dirname(os.path.abspath(__file__))
+    """Writable user settings, logs, and AI data; separate from program files."""
+    return _DATA_DIR
 
 
 def bundled_resource(name):
@@ -2373,6 +2374,7 @@ class App:
         self.root = tk.Tk()
         self.root.title(f"SC Capacitor Overlay v{__version__}")
         install_icon(self.root, bundled_resource)
+        refresh_installed_version(__version__)
         self.root.geometry("1100x720")
         self.root.configure(bg=COLORS["bg"])
         self.root.resizable(False, False)
@@ -2410,6 +2412,8 @@ class App:
         self._setup_hotkeys()
         from updater import Updater
         self.updater = Updater(self, sys.modules[__name__])
+        if _DATA_WARNINGS:
+            self.root.after(800, lambda: messagebox.showwarning("Settings import", "\n\n".join(_DATA_WARNINGS), parent=self.root))
         if self.learner is not None:
             self.root.after(3000, self._kick_idle_training)
             self._ai_status_tick()

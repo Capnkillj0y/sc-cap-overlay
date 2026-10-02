@@ -12,10 +12,13 @@ build_env\Scripts\python.exe release_build.py
 if errorlevel 1 goto failed
 echo.
 echo Build succeeded. Release assets:
+echo   dist\SC-Capacitor-Setup.exe
+echo   dist\SC-Capacitor-Setup.exe.sha256
 echo   dist\SC_Capacitor_Overlay.exe
 echo   dist\SC_Capacitor_Overlay.exe.sha256
-echo Upload BOTH files when publishing a release manually.
-echo GitHub Actions can build and attach both automatically instead.
+echo Upload all FOUR files when publishing a release manually.
+echo New users download SC-Capacitor-Setup.exe. The portable EXE supports auto-updates.
+echo GitHub Actions builds and attaches these automatically.
 pause
 exit /b 0
 :no_python

@@ -222,7 +222,7 @@ class Updater:
         self.start_job = self.root.after(4000, self.startup)
         # Delete only completed staging directories; failed updates keep diagnostics.
         if getattr(sys, 'frozen', False):
-            for directory in Path(module.app_dir()).glob('.sc-update-*'):
+            for directory in Path(sys.executable).resolve().parent.glob('.sc-update-*'):
                 try:
                     if json.loads((directory/'update.json').read_text()).get('complete'):
                         shutil.rmtree(directory, ignore_errors=True)
