@@ -1,67 +1,3 @@
-# Glass Cockpit · v1.1.0
-
-The controller now uses the frosted Glass Cockpit artwork, cyan frame lighting,
-glass buttons, and an illuminated live capacitor gauge. All labels, values,
-switches and actions are live controls. The background is a bundled texture;
-it does not require an internet connection.
-
-## GitHub updates (new in 1.1.0)
-
-See **[GITHUB_WALKTHROUGH.md](GITHUB_WALKTHROUGH.md)** for the complete first-time
-GitHub Desktop setup and future release steps. The UPDATES button configures
-checks. Startup checks offer new releases, verify their checksum, and install
-with your approval. The Windows release workflow builds the EXE, embeds the
-repository automatically, performs a startup smoke check, and creates a draft
-release for you to review and publish. The workflow uses a public repository.
-
-## Startup crash fixed in 1.0.6
-
-Fixed `height and width must be > 0` during Windows startup. Drawing now waits
-until Tk reports a real canvas size, and gauge/switch image sizes are bounded
-to at least one pixel. The exact 1x1 startup condition reproduced the error in
-1.0.5 and passed with 1.0.6, including normal rendering after geometry is ready.
-
-## Use this version
-
-Extract the whole ZIP into a new folder. Run `build.bat` on Windows to create
-`dist\SC_Capacitor_Overlay.exe`, then launch that newly built EXE. An older EXE
-will still show the previous UI. This package contains source, not a prebuilt EXE.
-The build script includes the new skin artwork automatically.
-
-To run from Python instead:
-
-```bat
-python -m pip install -r requirements.txt
-python sc_capacitor_ocr.py
-```
-
-Keep `glass_skin.py` and `glass_cockpit_skin.png` beside the main script when
-running from source. Copy your existing `config.json` and `missile_ai` training
-folder next to the version you launch to retain calibration and training data.
-
-Drag the top bar to move the window. Its top-right controls minimize, maximize,
-and close it. Double-click the top bar to maximize/restore. Drag the bottom-right
-corner to resize; the entire interface scales together.
-
-The gauge uses the existing automatically learned full-capacitor value.
-Cached artwork and batched redraws keep its live reading visible during updates.
-Screen capture, OCR, capacitor scaling, calibration and missile detection logic
-are retained from the supplied application.
-
-## Verification
-
-UI checks covered setup/ready/monitoring states, position buttons through the
-canvas click handler, toggle clicks, hotkey editor, gauge updates from empty to
-full, maximize/restore and smaller-window scaling. Python compilation and ZIP
-integrity checks passed. Live game OCR, Windows taskbar/minimize behavior and
-Windows global hotkeys still need verification on a Windows PC.
-
-`glass-cockpit-preview.png` shows the implemented interface using simulated
-telemetry in the test environment. Its AI-unavailable and Windows-hotkey notices
-reflect the test environment, not removal of those application features.
-
----
-
 # SC Capacitor Overlay
 
 A little on-screen alert that flashes when your Star Citizen weapon
@@ -97,38 +33,7 @@ A couple of things you'll likely see the first time, both normal:
   minute, needs an internet connection.
 
 Once it's open, click **CALIBRATE** and follow the steps — see
-[Using it](#using-it) below.
-
----
-
-## Building it yourself (only needed if you're the one distributing this)
-
-**1. Build the app**
-
-This is the only step that needs Python — and only on *your* machine, only
-this once, only so `build.bat` can run PyInstaller to produce the exe.
-Nobody who receives the finished exe (including future-you) will ever need
-Python for anything.
-
-Double-click **`build.bat`**. If you don't have Python yet, grab it from
-[python.org](https://www.python.org/downloads/) (tick "Add to PATH" during
-install) and run `build.bat` again. The script handles everything else
-itself and takes a minute or two.
-
-When it's done, you'll have a file called **`SC_Capacitor_Overlay.exe`**
-inside a new `dist` folder. Python, these scripts, and the template image
-files are all baked into that one exe — you won't need any of them again.
-
-**2. Share it**
-
-Upload or send **just that one exe** — not this folder, not the `.py` file,
-not `build.bat`. That single file is the entire app for anyone downloading
-it; see the section above for what they'll experience.
-
-If you're posting it somewhere public (Discord, Nexus, itch.io, etc.), it's
-worth pasting a short heads-up about the SmartScreen/antivirus prompts
-above so people aren't caught off guard — feel free to copy that section
-as-is.
+Using it below.
 
 ---
 
@@ -304,28 +209,3 @@ background with just its own window.
   missile settings) is saved in a small `config.json` file next to the app
   (and any missile-AI data in a `missile_ai` folder beside it).
   Deleting it just means you'll be asked to calibrate again next time.
-
----
-
-## Releases & updates (for the maintainer)
-
-The app reports its own version (`__version__` near the top of
-`sc_capacitor_ocr.py`, and in the window title). To ship an update:
-
-1. Bump `__version__`.
-2. Rebuild with `build.bat`.
-3. Commit, tag, and push:
-   ```
-   git add -A
-   git commit -m "v1.1.0 - what changed"
-   git tag v1.1.0
-   git push && git push --tags
-   ```
-4. On GitHub, go to **Releases → Draft a new release**, pick the tag you just
-   pushed, and attach the built `SC_Capacitor_Overlay.exe` from `dist/`.
-
-Auto-update isn't built yet, but this is deliberately set up for it: a future
-version can check `https://api.github.com/repos/<you>/<repo>/releases/latest`
-on startup, compare the returned tag to `__version__`, and prompt if a newer
-one exists. That only needs your GitHub username/repo name once you've
-created it -- ask to have it wired in whenever you're ready.
