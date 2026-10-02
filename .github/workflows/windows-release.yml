@@ -1,0 +1,47 @@
+name: Build Windows release
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: windows-release
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install build dependencies
+        run: python -m pip install -r requirements.txt "pyinstaller>=6.9,<7"
+      - name: Test updater
+        run: python -m unittest discover -s tests -v
+      - name: Build Windows EXE and checksum
+        env:
+          RELEASE_REPOSITORY: ${{ github.repository }}
+        run: python release_build.py --repository "$env:RELEASE_REPOSITORY"
+      - name: Windows EXE startup smoke check
+        shell: pwsh
+        run: |
+          $exe = Join-Path $PWD "dist/SC_Capacitor_Overlay.exe"
+          $process = Start-Process -FilePath $exe -WorkingDirectory (Join-Path $PWD "dist") -PassThru
+          try {
+            if ($process.WaitForExit(12000)) { throw "The EXE exited during the startup smoke check." }
+            if (Test-Path "dist/error_log.txt") { throw (Get-Content "dist/error_log.txt" -Raw) }
+            if ((Test-Path "dist/app_log.txt") -and (Select-String -Path "dist/app_log.txt" -Pattern "Traceback" -Quiet)) { throw (Get-Content "dist/app_log.txt" -Raw) }
+          } finally {
+            if (-not $process.HasExited) { Stop-Process -Id $process.Id -Force }
+          }
+      - name: Create a draft release with both assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_COMMIT: ${{ github.sha }}
+        shell: pwsh
+        run: |
+          $release = Get-Content release-info.json | ConvertFrom-Json
+          gh release create $release.tag "dist/SC_Capacitor_Overlay.exe" "dist/SC_Capacitor_Overlay.exe.sha256" --draft --target "$env:RELEASE_COMMIT" --title "SC Capacitor Overlay $($release.tag)" --notes "Glass Cockpit desktop app. Download SC_Capacitor_Overlay.exe to run it. Existing installations can use the in-app updater."
+          if ($LASTEXITCODE -ne 0) { throw "Release creation failed. Use a new version number, or delete an unpublished failed draft before retrying." }

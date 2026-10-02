@@ -1,0 +1,31 @@
+# -- personal / machine-specific, never commit --
+config.json
+config.json.tmp
+config.json.corrupted
+app_log.txt
+app_log.txt.old
+error_log.txt
+calibration_crop.png
+missile_ai/
+
+# -- build output (produced by build.bat, not source) --
+build/
+dist/
+*.spec
+build_env/
+
+# -- Python noise --
+__pycache__/
+*.pyc
+*.pyo
+
+# -- OS noise --
+.DS_Store
+Thumbs.db
+
+# Local updater state and staged binaries
+update_settings.json
+update_settings.tmp
+.sc-update-*/
+*.exe.previous
+release-info.json
