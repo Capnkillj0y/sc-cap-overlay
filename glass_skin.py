@@ -284,6 +284,7 @@ class Surface:
         self.normal_geometry=None
         self._layout_job=None
         self._paint_job=None
+        self._region_key=None
         self.source=Image.open(module.bundled_resource('glass_cockpit_skin.png')).convert('RGB').crop((50,82,1486,972))
         self.canvas=tk.Canvas(self.root,bg='#05111c',highlightthickness=0,bd=0)
         self.canvas.pack(fill='both',expand=True)
@@ -307,6 +308,7 @@ class Surface:
     def mapped(self,event):
         if event.widget!=self.root: return
         self.root.overrideredirect(True)
+        self._region_key=None
         self.schedule_layout()
         if os.name=='nt':
             try:
@@ -339,6 +341,27 @@ class Surface:
         size=(max(1,round(1436*self.scale)),max(1,round(890*self.scale)))
         self.offset=((w-size[0])/2,(h-size[1])/2)
         self.background=ImageTk.PhotoImage(self.source.resize(size,Image.Resampling.LANCZOS))
+        # A live rounded rim matches the native window region; the source art
+        # remains intact. Region bounds follow the artwork when letterboxed.
+        radius=max(12,round(32*self.scale))
+        rim=Image.new('RGBA',size)
+        d=ImageDraw.Draw(rim)
+        d.rounded_rectangle((1,1,size[0]-2,size[1]-2),radius=radius,
+                            outline='#12364c',width=max(3,round(5*self.scale)))
+        d.rounded_rectangle((1,1,size[0]-2,size[1]-2),radius=radius,
+                            outline='#368cad',width=1)
+        self.frame_rim=ImageTk.PhotoImage(rim)
+        if os.name=='nt':
+            from desktop_window import window_handle, set_rounded_region
+            try:
+                hwnd=window_handle(self.root)
+                left,top=map(round,self.offset)
+                bounds=(left,top,left+size[0],top+size[1])
+                key=(hwnd,bounds,radius)
+                if key!=self._region_key and set_rounded_region(hwnd,bounds,radius):
+                    self._region_key=key
+            except (OSError,AttributeError) as exc:
+                print('Rounded window unavailable:',exc)
         self.repaint()
     def repaint(self):
         # Repaint the cached skin and live items together. Tk's incremental
@@ -349,6 +372,7 @@ class Surface:
         if not self.ready or not hasattr(self,'background'): return
         self.canvas.delete('all')
         self.canvas.create_image(*self.offset,image=self.background,anchor='nw',tags='background')
+        self.canvas.create_image(*self.offset,image=self.frame_rim,anchor='nw',tags='frame')
         for item in self.items: item.draw()
     def redraw_item(self,item):
         if not self.ready or not hasattr(self,'background'): return
@@ -402,6 +426,9 @@ class Surface:
         x,y=self.original(event)
         if y<125 and x<1250: self.maximize()
     def minimize(self):
+        from desktop_window import clear_region
+        clear_region(self.root)
+        self._region_key=None
         self.root.overrideredirect(False)
         self.root.iconify()
     def maximize(self):

@@ -24,8 +24,8 @@ def main():
     if not args.metadata_only:
         if os.name!='nt': raise RuntimeError('Build this Windows release on Windows or use the included GitHub workflow.')
         cmd=[sys.executable,'-m','PyInstaller','--noconfirm','--clean','--onefile','--windowed',
-             '--name','SC_Capacitor_Overlay','--hidden-import','missile_ai','--hidden-import','glass_skin','--hidden-import','updater']
-        for name in ('glass_cockpit_skin.png','update_config.json','missile_template.png','inbound_template.png','missile_word_template.png'):
+             '--name','SC_Capacitor_Overlay','--icon','sc_capacitor.ico','--hidden-import','missile_ai','--hidden-import','glass_skin','--hidden-import','updater']
+        for name in ('sc_capacitor.ico','sc_capacitor_icon.png','glass_cockpit_skin.png','update_config.json','missile_template.png','inbound_template.png','missile_word_template.png'):
             cmd+=['--add-data',name+';.']
         subprocess.run(cmd+['sc_capacitor_ocr.py'],check=True)
         exe=Path('dist')/ASSET

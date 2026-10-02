@@ -1,4 +1,11 @@
-# Glass Cockpit · v1.1.2
+# Glass Cockpit · v1.1.3
+
+## Window and icon polish in 1.1.3
+
+The main Windows window now follows a rounded outline instead of leaving
+square corner triangles outside the artwork. The region updates on resizing
+and restore. A custom SC capacitor icon is included in the EXE, taskbar,
+and window dialogs. The icon ships in sizes from 16 to 256 pixels.
 
 ## Fixes in 1.1.2
 

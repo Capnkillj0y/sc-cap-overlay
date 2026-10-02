@@ -19,7 +19,7 @@ RUN
   python sc_capacitor_ocr.py
 """
 
-__version__ = "1.1.2"  # bump this before publishing each GitHub release
+__version__ = "1.1.3"  # bump this before publishing each GitHub release
 
 import sys
 # Run the separate replacement helper before loading OCR/Tk or the application.
@@ -2368,8 +2368,11 @@ class App:
     window spawned underneath it while monitoring is active."""
 
     def __init__(self):
+        from desktop_window import prepare_app_identity, install_icon
+        prepare_app_identity()
         self.root = tk.Tk()
         self.root.title(f"SC Capacitor Overlay v{__version__}")
+        install_icon(self.root, bundled_resource)
         self.root.geometry("1100x720")
         self.root.configure(bg=COLORS["bg"])
         self.root.resizable(False, False)
