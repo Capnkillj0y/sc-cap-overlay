@@ -19,7 +19,7 @@ RUN
   python sc_capacitor_ocr.py
 """
 
-__version__ = "1.1.3"  # bump this before publishing each GitHub release
+__version__ = "1.1.4"  # bump this before publishing each GitHub release
 
 import sys
 # Run the separate replacement helper before loading OCR/Tk or the application.

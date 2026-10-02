@@ -1,4 +1,11 @@
-# Glass Cockpit · v1.1.3
+# Glass Cockpit · v1.1.4
+
+## Flight icon in 1.1.4
+
+Replaces the SC monogram with the selected Flight design: a silver futuristic
+fighter on a frosted blue glass tile. The same artwork is bundled for the
+Windows EXE, taskbar, and app windows, with transparent outer corners and
+icon sizes from 16 to 256 pixels. Rounded window corners are retained.
 
 ## Window and icon polish in 1.1.3
 
