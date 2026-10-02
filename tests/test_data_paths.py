@@ -63,5 +63,5 @@ class DataMigrationTests(unittest.TestCase):
     def test_override_does_not_import_real_settings(self):
         with patch.dict(d.os.environ,{'SC_CAPACITOR_DATA_DIR':str(self.new)}),patch.object(d,'program_dir',return_value=self.old):
             data,warnings=d.initialize_data_dir()
-        self.assertEqual(Path(data),self.new)
+        self.assertEqual(Path(data).resolve(),self.new.resolve())
         self.assertFalse((self.new/'config.json').exists())
