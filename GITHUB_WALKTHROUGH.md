@@ -1,9 +1,9 @@
 # Put SC Capacitor Overlay on GitHub and publish updates
 
-This package is version **1.1.1**. The updater was introduced in **1.1.0**.
-If you already published 1.1.0, copy this package's contents into your existing
+This package is version **1.1.2**. The updater was introduced in **1.1.0**.
+If you already published 1.1.0 or 1.1.1, copy this package's contents into your existing
 repository, commit and push the changes, then run Build Windows release. Test
-and publish the new v1.1.1 draft. Your installed 1.1.0 app can then update to it.
+and publish the new v1.1.2 draft. Your installed app can then update to it.
 The first-time setup examples below describe the original 1.1.0 release.
 
 A repository stores your source code. A commit saves a named snapshot on your PC.
@@ -112,8 +112,9 @@ A failed unpublished draft can be deleted before rerunning the same version.
 - A separate helper waits for the running EXE to exit, replaces only that EXE,
   then launches the new version. Configuration and AI data are not replaced.
 - The old EXE is retained beside it as `SC_Capacitor_Overlay.exe.previous`.
-- The **UPDATES** button lets users configure the repository, enable/disable
-  startup checks, and perform a manual check.
+- The **UPDATES** button performs a manual check directly. GitHub builds embed
+  the repository automatically; no repository prompt is shown. Existing startup
+  preferences are retained in update_settings.json.
 
 The checksum detects a corrupted/mismatched download; it is not a publisher's
 code-signing certificate. Releases are trusted from the configured repository.

@@ -19,7 +19,7 @@ RUN
   python sc_capacitor_ocr.py
 """
 
-__version__ = "1.1.1"  # bump this before publishing each GitHub release
+__version__ = "1.1.2"  # bump this before publishing each GitHub release
 
 import sys
 # Run the separate replacement helper before loading OCR/Tk or the application.
@@ -126,8 +126,6 @@ def make_clickthrough(root: tk.Tk):
 # Global hotkeys (work even while Star Citizen has focus)
 # ---------------------------------------------------------------------------
 MOD_ALT, MOD_CONTROL, MOD_SHIFT, MOD_WIN = 0x0001, 0x0002, 0x0004, 0x0008
-MOD_NOREPEAT = 0x4000
-WM_HOTKEY = 0x0312
 _MOD_NAMES = {"ctrl": MOD_CONTROL, "control": MOD_CONTROL, "alt": MOD_ALT, "shift": MOD_SHIFT, "win": MOD_WIN}
 _NAMED_KEYS = {f"f{i}": 0x6F + i for i in range(1, 13)}  # f1..f12 -> VK_F1..VK_F12
 
@@ -152,68 +150,7 @@ def parse_hotkey(spec):
     return (mods, vk) if vk is not None else None
 
 
-class HotkeyManager:
-    """Registers global hotkeys via RegisterHotKey -- the same Windows API
-    screenshot tools and push-to-talk overlays use, rather than a low-level
-    keyboard hook, so it needs no extra pip dependency and isn't the kind of
-    thing that tends to draw anti-cheat attention. Windows only; a no-op
-    everywhere else. Callbacks fire on a dedicated background thread, so
-    every callback here just hands off to the Tk thread via root.after(0, ..)."""
-
-    def __init__(self, bindings, log=print):
-        """bindings: {id: (mods, vk, callback)}"""
-        self.bindings = bindings
-        self.log = log
-        self.thread = None
-        self._win_thread_id = None
-        self.registered_ids = []
-        self.failed_ids = []
-
-    def start(self):
-        if os.name != "nt" or not self.bindings:
-            return
-        self.thread = threading.Thread(target=self._run, daemon=True)
-        self.thread.start()
-
-    def _run(self):
-        try:
-            import ctypes.wintypes as wintypes
-        except Exception:
-            return
-        user32 = ctypes.windll.user32
-        kernel32 = ctypes.windll.kernel32
-        self._win_thread_id = kernel32.GetCurrentThreadId()
-        for hotkey_id, (mods, vk, _cb) in self.bindings.items():
-            ok = user32.RegisterHotKey(None, hotkey_id, mods | MOD_NOREPEAT, vk)
-            (self.registered_ids if ok else self.failed_ids).append(hotkey_id)
-            if not ok:
-                self.log(f"Hotkey id={hotkey_id} could not be registered "
-                         f"(likely already bound by another app)")
-        msg = wintypes.MSG()
-        while True:
-            ret = user32.GetMessageW(ctypes.byref(msg), None, 0, 0)
-            if ret == 0 or ret == -1:
-                break
-            if msg.message == WM_HOTKEY:
-                cb = self.bindings.get(msg.wParam, (None, None, None))[2]
-                if cb:
-                    try:
-                        cb()
-                    except Exception as e:
-                        self.log("Hotkey callback error:", e)
-            user32.TranslateMessage(ctypes.byref(msg))
-            user32.DispatchMessageW(ctypes.byref(msg))
-        for hotkey_id in self.registered_ids:
-            user32.UnregisterHotKey(None, hotkey_id)
-
-    def stop(self):
-        if self.thread is not None and self.thread.is_alive() and self._win_thread_id:
-            try:
-                ctypes.windll.user32.PostThreadMessageW(self._win_thread_id, 0x0012, 0, 0)  # WM_QUIT
-            except Exception:
-                pass
-            self.thread.join(timeout=2)
-        self.thread = None
+from hotkeys import HotkeyManager
 
 
 # ---------------------------------------------------------------------------
@@ -2522,7 +2459,7 @@ class App:
             self.hotkey_label.config(text="HOTKEYS (inactive -- needs Windows)  " + "  •  ".join(shown))
             return
 
-        self.hotkeys = HotkeyManager(bindings, log=print)
+        self.hotkeys = HotkeyManager(bindings, scheduler=self.root, log=print)
         self.hotkeys.start()
         self.root.after(500, lambda: self._report_hotkey_registration(shown))
 
@@ -2578,7 +2515,7 @@ class App:
         tk.Label(win, text="HOTKEY SETTINGS", bg=COLORS["bg"], fg=COLORS["cyan"],
                   font=("Segoe UI", 12, "bold")).pack(pady=(18, 4))
         tk.Label(win, text="Click RECORD, then press a key combo. Esc cancels a recording.\n"
-                            "These work even while Star Citizen has focus.",
+                            "Keys still type normally. A single-letter shortcut also fires while typing.",
                   bg=COLORS["bg"], fg=COLORS["text_dim"], font=("Segoe UI", 9), justify="center"
                   ).pack(pady=(0, 14))
 

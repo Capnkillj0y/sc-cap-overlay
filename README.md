@@ -1,4 +1,12 @@
-# Glass Cockpit · v1.1.1
+# Glass Cockpit · v1.1.2
+
+## Fixes in 1.1.2
+
+UPDATES now checks the configured release repository directly, with no repeated
+repository or startup-preference prompts. Global shortcuts observe key state
+instead of reserving keys, so single-letter bindings no longer block typing.
+A single-letter binding still fires its action while typing; use a modifier
+combination to avoid this. Windows keyboard behavior needs a manual check.
 
 ## UI polish in 1.1.1
 
@@ -15,8 +23,7 @@ it does not require an internet connection.
 ## GitHub updates (new in 1.1.0)
 
 See **[GITHUB_WALKTHROUGH.md](GITHUB_WALKTHROUGH.md)** for the complete first-time
-GitHub Desktop setup and future release steps. The UPDATES button configures
-checks. Startup checks offer new releases, verify their checksum, and install
+GitHub Desktop setup and future release steps. The UPDATES button checks for a release directly. Startup checks offer new releases, verify their checksum, and install
 with your approval. The Windows release workflow builds the EXE, embeds the
 repository automatically, performs a startup smoke check, and creates a draft
 release for you to review and publish. The workflow uses a public repository.
@@ -179,9 +186,8 @@ update — just run CALIBRATE again.
 
 ## Hotkeys (work even while Star Citizen has focus)
 
-These use Windows' own global-hotkey system (`RegisterHotKey` — the same
-mechanism screenshot tools and push-to-talk overlays use), so you never need
-to alt-tab. Defaults:
+These observe Windows key state without reserving or suppressing keys, so
+you can still type normally while the app is open. Defaults:
 
 | Hotkey | Does |
 |---|---|
@@ -191,8 +197,9 @@ to alt-tab. Defaults:
 | `Ctrl+Alt+G` | Toggle AI ASSIST (only once the model is `ready`) |
 
 They're active any time the app is open — you don't need to be monitoring —
-and the current bindings are always shown at the bottom of the window, with
-a note if one couldn't be registered (usually another app already has it).
+and the current bindings are always shown at the bottom of the window.
+Other apps receive the same keys. Single-letter bindings also trigger while
+typing; use a modifier combination if that is unwanted.
 
 **Remapping:** click **EDIT** next to the hotkey line in the main window
 (shows up once you've calibrated). Click **RECORD** next to any action,

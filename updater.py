@@ -239,27 +239,16 @@ class Updater:
         os.replace(temp, self.settings_path)
 
     def open_settings(self):
-        from tkinter import messagebox, simpledialog
+        """The UPDATES button checks the repository embedded by the release build."""
+        from tkinter import messagebox
         if self.busy:
             messagebox.showinfo('Updates', 'An update check or download is already running.', parent=self.root)
             return
-        self.app._modal_open = True
-        try:
-            repo = simpledialog.askstring('GitHub updates',
-                f'Current version: {self.module.__version__}\n\nPublic GitHub repository (username/repository):',
-                initialvalue=self.settings.get('repository',''), parent=self.root)
-            if repo is None: return
-            repo = repo.strip().removeprefix('https://github.com/').rstrip('/')
-            if not valid_repo(repo):
-                messagebox.showerror('Updates', 'Use username/repository, for example shane/sc-cap-overlay.', parent=self.root)
-                return
-            auto = messagebox.askyesno('Automatic checks', 'Check for updates automatically each time the app opens?\n\nInstallation will still ask for your approval.', parent=self.root)
-            self.settings.update(repository=repo, check_on_startup=auto)
-            try: self.save()
-            except OSError as exc:
-                messagebox.showerror('Updates', f'Could not save update settings:\n{exc}', parent=self.root)
-                return
-        finally: self.app._modal_open = False
+        if not valid_repo(self.settings.get('repository', '')):
+            messagebox.showerror('Updates',
+                'This build has no update repository configured. Use the EXE from your GitHub release.',
+                parent=self.root)
+            return
         self.check(True)
 
     def status(self, text):
