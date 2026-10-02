@@ -35,10 +35,33 @@ try {
   if (!$app.HasExited) {
     & taskkill.exe /PID $app.Id /T /F | Out-Null
   }
+  # taskkill returning doesn't guarantee Windows has released the exe's file
+  # handle yet -- this app has a few background threads (screen capture,
+  # hotkey listener, AI collector) that can take a moment to unwind even
+  # after a force-kill. Wait for the process to actually be gone, not just
+  # for the kill request to have been issued, so the reinstall below isn't
+  # racing a lock that's still being torn down.
+  $deadline = (Get-Date).AddSeconds(15)
+  while ((Get-Process -Id $app.Id -ErrorAction SilentlyContinue) -and (Get-Date) -lt $deadline) {
+    Start-Sleep -Milliseconds 250
+  }
+  if (Get-Process -Id $app.Id -ErrorAction SilentlyContinue) {
+    throw "Installed app process $($app.Id) did not fully exit within 15s; its exe may still be locked."
+  }
 }
 # Reinstall must retain settings. Uninstall removes shortcuts/program but keeps data.
+$logsBefore = @(Get-ChildItem (Join-Path $env:TEMP 'Setup Log*.txt') -ErrorAction SilentlyContinue)
 $again = Start-Process -FilePath (Join-Path $PWD 'dist/SC-Capacitor-Setup.exe') -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=`"$installDir`"") -Wait -PassThru
-if ($again.ExitCode -ne 0) { throw 'Reinstall failed.' }
+if ($again.ExitCode -ne 0) {
+  # SetupLogging=yes means Inno already wrote the real reason to its own log
+  # (file-in-use, disk space, etc.) -- surface it instead of just the exit
+  # code, so a future failure here is self-diagnosing on the first try.
+  $newLog = Get-ChildItem (Join-Path $env:TEMP 'Setup Log*.txt') -ErrorAction SilentlyContinue |
+    Where-Object { $logsBefore.FullName -notcontains $_.FullName } |
+    Sort-Object LastWriteTime -Descending | Select-Object -First 1
+  $detail = if ($newLog) { "`n--- $($newLog.Name) ---`n" + (Get-Content $newLog.FullName -Raw) } else { ' (no Inno Setup log found)' }
+  throw "Reinstall failed, exit code $($again.ExitCode).$detail"
+}
 $uninstall = Start-Process -FilePath (Join-Path $installDir 'unins000.exe') -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -Wait -PassThru
 if ($uninstall.ExitCode -ne 0) { throw 'Uninstall failed.' }
 if ((Test-Path $exe) -or (Test-Path $desktopLink) -or (Test-Path $startLink) -or (Test-Path $regKey)) { throw 'Uninstall left program registration or shortcuts.' }
