@@ -312,10 +312,20 @@ class Surface:
         self.schedule_layout()
         if os.name=='nt':
             try:
+                # GetParent (used here before) can return an inner wrapper
+                # window, an owner window, or nothing useful, depending on
+                # exactly how Tk nests its windows on Windows -- not
+                # reliably the real top-level window the taskbar cares
+                # about. GetAncestor(hwnd, GA_ROOT), via this same file's
+                # own window_handle() helper (already proven correct --
+                # it's what the rounded-corner window region uses), is the
+                # actual documented way to get that window. Applying the
+                # WS_EX_APPWINDOW fix-up to the wrong handle would silently
+                # do nothing, leaving the real window without a taskbar
+                # entry even while fully open.
+                from desktop_window import window_handle
                 user32=ctypes.windll.user32
-                user32.GetParent.argtypes=[ctypes.c_void_p]
-                user32.GetParent.restype=ctypes.c_void_p
-                hwnd=user32.GetParent(self.root.winfo_id())
+                hwnd=window_handle(self.root)
                 style=user32.GetWindowLongW(ctypes.c_void_p(hwnd),-20)
                 user32.SetWindowLongW(ctypes.c_void_p(hwnd),-20,(style|0x40000)&~0x80)
             except (OSError,AttributeError): pass
