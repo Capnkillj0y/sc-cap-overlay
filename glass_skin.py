@@ -365,6 +365,18 @@ class Surface:
             from desktop_window import window_handle, set_rounded_region
             try:
                 hwnd=window_handle(self.root)
+                # Re-assert the taskbar-visibility fix on every layout pass,
+                # using this SAME freshly-fetched handle, not just once in
+                # mapped(). overrideredirect() can recreate the native
+                # window; if that happens between mapped()'s own handle
+                # lookup and this one, mapped()'s fix would land on a
+                # handle that's no longer the current window -- which would
+                # show a correct taskbar entry for a moment, then lose it
+                # the instant layout() runs and starts operating on the
+                # real (different) one instead.
+                user32=ctypes.windll.user32
+                style=user32.GetWindowLongW(ctypes.c_void_p(hwnd),-20)
+                user32.SetWindowLongW(ctypes.c_void_p(hwnd),-20,(style|0x40000)&~0x80)
                 left,top=map(round,self.offset)
                 bounds=(left,top,left+size[0],top+size[1])
                 key=(hwnd,bounds,radius)
