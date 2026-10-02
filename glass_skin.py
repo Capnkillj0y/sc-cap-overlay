@@ -430,6 +430,13 @@ class Surface:
         clear_region(self.root)
         self._region_key=None
         self.root.overrideredirect(False)
+        # overrideredirect isn't a simple style flip -- Tk tears down and
+        # recreates the native window underneath. Without forcing that to
+        # finish first, iconify() can fire on a window that's still
+        # mid-recreation and not yet taskbar-registered: it vanishes with
+        # no taskbar button to restore from, though the raw window handle
+        # still exists (which is why Alt+Tab could still find it).
+        self.root.update_idletasks()
         self.root.iconify()
     def maximize(self):
         if self.maximized:
