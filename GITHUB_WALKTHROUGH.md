@@ -1,6 +1,10 @@
 # Put SC Capacitor Overlay on GitHub and publish updates
 
-This package is version **1.1.0**, the first version with the updater.
+This package is version **1.1.1**. The updater was introduced in **1.1.0**.
+If you already published 1.1.0, copy this package's contents into your existing
+repository, commit and push the changes, then run Build Windows release. Test
+and publish the new v1.1.1 draft. Your installed 1.1.0 app can then update to it.
+The first-time setup examples below describe the original 1.1.0 release.
 
 A repository stores your source code. A commit saves a named snapshot on your PC.
 A push uploads those commits to GitHub. A release distributes the finished EXE.

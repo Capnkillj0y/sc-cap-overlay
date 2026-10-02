@@ -1,4 +1,11 @@
-# Glass Cockpit · v1.1.0
+# Glass Cockpit · v1.1.1
+
+## UI polish in 1.1.1
+
+The Updates button now has a frosted blue border, the version is larger and
+matches the dashboard typography, selected missile switches have a blue track,
+and learner status messages use matching uppercase lettering. Selected switches
+remain visibly blue when monitoring temporarily locks their controls.
 
 The controller now uses the frosted Glass Cockpit artwork, cyan frame lighting,
 glass buttons, and an illuminated live capacitor gauge. All labels, values,

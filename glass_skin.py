@@ -16,7 +16,7 @@ def rgb(value):
     return tuple(int(value[i:i+2], 16) for i in (1,3,5))
 
 
-def glass_button(width, height, color):
+def glass_button(width, height, color, subtle=False):
     """Independent live-state glass artwork with a frosted bevel and soft glow."""
     scale = 2
     w, h = max(2,int(width*scale)), max(2,int(height*scale))
@@ -33,9 +33,9 @@ def glass_button(width, height, color):
     ImageDraw.Draw(mask).rounded_rectangle((2,2,w-3,h-3),radius=9*scale,fill=255)
     image.putalpha(mask)
     draw.rounded_rectangle((2,2,w-3,h-3),radius=9*scale,
-                           outline=tuple(min(255,int(c*.6+100)) for c in base)+(255,),width=2*scale)
+                           outline=(36,153,202,255) if subtle else tuple(min(255,int(c*.6+100)) for c in base)+(255,),width=scale if subtle else 2*scale)
     draw.rounded_rectangle((5,5,w-6,h-6),radius=7*scale,
-                           outline=tuple(min(255,int(c*.5+100)) for c in base)+(100,),width=scale)
+                           outline=(75,176,222,65) if subtle else tuple(min(255,int(c*.5+100)) for c in base)+(100,),width=scale)
     # Blur the padded layer so the light fades out, without a rectangular cutoff.
     result=Image.new('RGBA',(w+32*scale,h+32*scale))
     result.alpha_composite(image,(16*scale,16*scale))
@@ -95,10 +95,10 @@ class Button(Label):
         x1,y1,x2,y2=self.box
         style=self.style if not self.disabled else None
         if style:
-            color='#fa5264' if style=='red' else '#03def4'
+            color={'red':'#fa5264','glass':'#153f5c'}.get(style,'#03def4')
             key=(round((x2-x1)*s.scale),round((y2-y1)*s.scale),color)
             if self._image_key!=key:
-                self._image=ImageTk.PhotoImage(glass_button(key[0],key[1],color))
+                self._image=ImageTk.PhotoImage(glass_button(key[0],key[1],color,subtle=style=='glass'))
                 self._image_key=key
             x,y=s.xy(x1,y1)
             s.canvas.create_image(x-16,y-16,image=self._image,anchor='nw',tags=self.tag)
@@ -135,8 +135,17 @@ class Toggle(Button):
             q=3
             im=Image.new('RGBA',(w*q,h*q))
             d=ImageDraw.Draw(im)
-            d.rounded_rectangle((1*q,3*q,70*q,37*q),radius=18*q,fill=(8,35,53,240),outline=(62,142,185,255),width=1*q)
-            d.rounded_rectangle((2*q,4*q,69*q,36*q),radius=16*q,outline=(83,162,203,130),width=q)
+            active=self.value
+            # The entire selected track lights blue, not just the moving knob.
+            fill=(13,112,185,255) if active else (8,35,53,240)
+            rim=(64,211,255,255) if active else (62,142,185,255)
+            if active and self.disabled:
+                fill=(16,78,127,255)
+                rim=(58,151,203,255)
+            d.rounded_rectangle((1*q,3*q,70*q,37*q),radius=18*q,fill=fill,outline=rim,width=1*q)
+            d.rounded_rectangle((2*q,4*q,69*q,36*q),radius=16*q,outline=(116,220,255,180) if active else (83,162,203,130),width=q)
+            if active:
+                d.line((17*q,7*q,53*q,7*q),fill=(111,207,255,145),width=q)
             cx=52 if self.value else 24
             for r in range(13,0,-1):
                 t=1-r/13
@@ -151,6 +160,18 @@ class Toggle(Button):
         color='#83afc8' if self.disabled else CYAN if self.value else DIM
         s.canvas.create_text(*s.xy(self.x,self.y),text=self.text,anchor='w',fill=color,
                             font=(FONT,-max(8,round(19*s.scale))),tags=self.tag)
+
+
+class StatusLabel(Label):
+    """Keep changing learner messages in the dashboard's uppercase typography."""
+    def draw(self):
+        original=self.text
+        message=str(original).upper().replace(' - ','\n').replace(' · ','\n')
+        self.text='\n'.join('\u2009'.join(line) for line in message.split('\n'))
+        try:
+            super().draw()
+        finally:
+            self.text=original
 
 
 class Gauge:
@@ -419,7 +440,7 @@ def build(app,module):
     app.ai_assist_toggle=Toggle(s,736,640,track('AI ASSIST'),app.toggle_ai_assist)
     app.test_flare_btn=Button(s,(1184,517,1434,564),track('TEST FLARE'),app.test_flare,17,text_x=1322)
     app.false_alarm_btn=Button(s,(1184,614,1434,662),track('FALSE ALARM'),app.ai_false_alarm,15,text_x=1337)
-    app.ai_status_label=Label(s,1306,590,'AI unavailable' if app.learner is None else 'collecting · 0 samples',15,DIM,'center',width=250)
+    app.ai_status_label=StatusLabel(s,1309,589,'AI unavailable' if app.learner is None else 'collecting · 0 samples',17,DIM,'center',bold=True,width=250)
     Label(s,187,758,track('ALERT BELOW'),17,DIM)
     app.threshold_label=Label(s,142,813,'--',49,WHITE,bold=True)
     Label(s,481,758,track('OVERLAY'),17,DIM)
@@ -429,8 +450,8 @@ def build(app,module):
     app.hotkey_label=Hotkeys(s,app,module)
     Button(s,(705,889,1023,942),track('RESET TO DEFAULTS'),app.reset_to_defaults,17,text_x=896)
     Button(s,(1280,889,1453,942),track('EXIT'),app.on_close,17,text_x=1398)
-    Button(s,(1041,889,1261,942),track('UPDATES'),lambda: app.updater.open_settings(),17)
-    Label(s,1122,105,'v'+module.__version__,12,DIM,anchor='e')
+    Button(s,(1041,889,1261,942),track('UPDATES'),lambda: app.updater.open_settings(),17,style='glass')
+    Label(s,1122,105,track('V'+module.__version__),19,DIM,anchor='e',bold=True)
     app.update_status_label=Label(s,1000,105,'',12,DIM,anchor='e')
     s.ready=True
     app.root.update_idletasks()
