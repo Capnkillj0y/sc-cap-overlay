@@ -305,8 +305,10 @@ class Surface:
             width=round(height*1436/890)
         self.root.geometry(f'{width}x{height}+40+40')
         self.root.bind('<Map>',self.mapped,add='+')
+        self._minimizing=False
     def mapped(self,event):
         if event.widget!=self.root: return
+        if self._minimizing: return  # minimize() is deliberately going native right now -- let it finish
         self.root.overrideredirect(True)
         self._region_key=None
         self.schedule_layout()
@@ -328,6 +330,17 @@ class Surface:
                 hwnd=window_handle(self.root)
                 style=user32.GetWindowLongW(ctypes.c_void_p(hwnd),-20)
                 user32.SetWindowLongW(ctypes.c_void_p(hwnd),-20,(style|0x40000)&~0x80)
+                # Explorer mainly decides taskbar eligibility at the moment
+                # a window goes from hidden to shown, not from a live style
+                # change on a window that's already visible -- which is why
+                # alt-tabbing to it (itself a visibility/activation change)
+                # made a taskbar button appear when nothing else did. Force
+                # that same hidden->shown transition ourselves right after
+                # fixing the style, instead of waiting for some unrelated
+                # event to incidentally trigger Explorer to re-check.
+                SW_HIDE,SW_SHOW=0,5
+                user32.ShowWindow(ctypes.c_void_p(hwnd),SW_HIDE)
+                user32.ShowWindow(ctypes.c_void_p(hwnd),SW_SHOW)
             except (OSError,AttributeError): pass
     def xy(self,x,y):
         return ((x-50)*self.scale+self.offset[0],(y-82)*self.scale+self.offset[1])
@@ -451,17 +464,32 @@ class Surface:
         from desktop_window import clear_region
         clear_region(self.root)
         self._region_key=None
+        # mapped() unconditionally flips overrideredirect back to True on
+        # every single <Map> event -- including the one this very call is
+        # about to trigger. Without this flag the two fight each other: we
+        # go native here so Windows can minimize properly, mapped() sees
+        # the resulting <Map> and immediately reverts to the custom
+        # chrome-less mode, and the half-finished window in between just
+        # disappears instead of minimizing. Suppress that reversal for the
+        # duration of this specific transition.
+        self._minimizing=True
         self.root.overrideredirect(False)
-        # overrideredirect isn't a simple style flip -- Tk tears down and
-        # recreates the native window underneath, and Windows needs a real
-        # additional turn of its own message loop to finish registering
-        # that new window as a normal, taskbar-eligible one. update_idletasks()
-        # only flushes Tk's own internal redraw/geometry queue in the same
-        # call stack -- it does NOT pump the OS-level window-manager
-        # messages this specific recreation depends on, so it wasn't
-        # enough. Deferring iconify() with after() instead of calling it
-        # synchronously lets that message loop actually run first.
-        self.root.after(10, self.root.iconify)
+        done=[False]
+        bind_id=[None]
+        def do_iconify(event=None):
+            if done[0]: return
+            if event is not None and event.widget is not self.root: return
+            done[0]=True
+            if bind_id[0] is not None:
+                self.root.unbind('<Map>',bind_id[0])  # one-shot: don't accumulate a new handler every minimize
+            self._minimizing=False
+            self.root.iconify()
+        # Wait for Windows to actually confirm the native-decorated window
+        # is mapped and ready, rather than guessing a fixed delay -- a
+        # fallback timer covers the unlikely case <Map> never fires so the
+        # window can't get stuck mid-transition.
+        bind_id[0]=self.root.bind('<Map>',do_iconify,add='+')
+        self.root.after(250,do_iconify)
     def maximize(self):
         if self.maximized:
             self.root.geometry(self.normal_geometry)
