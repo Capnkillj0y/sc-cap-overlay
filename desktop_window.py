@@ -117,6 +117,22 @@ class ManagedWindowFrame:
             self.handles.discard(hwnd)
         return self.comctl32.DefSubclassProc(hwnd, message, wparam, lparam)
 
+    def position(self):
+        rect = wintypes.RECT()
+        fn = self.user32.GetWindowRect
+        fn.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
+        fn.restype = wintypes.BOOL
+        if not fn(window_handle(self.root), ctypes.byref(rect)):
+            raise OSError('Could not read the window position')
+        return rect.left, rect.top
+
+    def move(self, x, y):
+        # Absolute signed desktop coordinates, including monitors left/above
+        # the primary display. Move only: preserve size, stacking and focus.
+        if not self.user32.SetWindowPos(window_handle(self.root), None,
+                                       int(x), int(y), 0, 0, 0x0001 | 0x0004 | 0x0010):
+            raise OSError('Could not move the window')
+
     def attach(self):
         hwnd = window_handle(self.root)
         if not hwnd or hwnd in self.handles:

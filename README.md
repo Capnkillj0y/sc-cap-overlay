@@ -1,3 +1,11 @@
+## v1.2.4 — Window dragging improvements
+
+- Moves the Windows window directly using signed desktop coordinates, avoiding repeated Tk geometry changes and malformed negative offsets.
+- Reuses the existing dashboard artwork and rounded region during position-only changes; resize still updates the layout.
+- Retains single-instance protection, normal minimize/restore, and Tactical Clean alerts.
+
+Local checks cover movement flags, cached artwork during moves, and redraw on resize. The Windows CI test also moves the actual window across positive and negative desktop coordinates before checking minimize/restore. Before publishing, test continuous dragging and monitor transitions on Windows; local Linux checks cannot confirm Windows compositor behavior.
+
 ## v1.2.3 — Prevent duplicate launches
 
 Only one copy of the updated app can run per Windows login session, even when launched from different folders. A second launch displays an already-running message and exits before loading settings or starting OCR. The updater helper remains exempt. Windows releases the guard when the owning process ends, including after a crash.

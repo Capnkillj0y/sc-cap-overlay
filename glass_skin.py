@@ -284,6 +284,7 @@ class Surface:
         self._layout_job=None
         self._paint_job=None
         self._region_key=None
+        self._layout_size=None
         self.source=Image.open(module.bundled_resource('glass_cockpit_skin.png')).convert('RGB').crop((50,82,1486,972))
         self.canvas=tk.Canvas(self.root,bg='#05111c',highlightthickness=0,bd=0)
         self.canvas.pack(fill='both',expand=True)
@@ -316,12 +317,17 @@ class Surface:
         else:
             self.root.overrideredirect(True)
         self._region_key=None
+        self._layout_size=None
         self.schedule_layout()
     def xy(self,x,y):
         return ((x-50)*self.scale+self.offset[0],(y-82)*self.scale+self.offset[1])
     def original(self,event):
         return ((event.x-self.offset[0])/self.scale+50,(event.y-self.offset[1])/self.scale+82)
     def schedule_layout(self,event=None):
+        # Moving a window can produce Configure events without a size change.
+        # Keep the existing canvas images and native region during those moves.
+        if event is not None and (event.width,event.height)==self._layout_size:
+            return
         if self._layout_job: self.root.after_cancel(self._layout_job)
         self._layout_job=self.root.after(25,self.layout)
     def layout(self):
@@ -335,6 +341,9 @@ class Surface:
         # or Map; never render a whole dashboard at this placeholder size.
         if w <= 1 or h <= 1:
             return
+        if (w,h)==self._layout_size:
+            return
+        self._layout_size=(w,h)
         self.scale=min(w/1436,h/890)
         size=(max(1,round(1436*self.scale)),max(1,round(890*self.scale)))
         self.offset=((w-size[0])/2,(h-size[1])/2)
@@ -403,7 +412,9 @@ class Surface:
         if x>1450 and y>936:
             self.resize=(event.x_root,event.y_root,self.root.winfo_width(),self.root.winfo_height())
         elif y<125:
-            self.drag=(event.x_root-self.root.winfo_x(),event.y_root-self.root.winfo_y())
+            left,top=(self.native_frame.position() if self.native_frame is not None
+                      else (self.root.winfo_x(),self.root.winfo_y()))
+            self.drag=(event.x_root-left,event.y_root-top)
     def drag_motion(self,event):
         if self.resize:
             x,y,w,h=self.resize
@@ -411,7 +422,11 @@ class Surface:
             height=max(534,h+event.y_root-y)
             self.root.geometry(f'{width}x{height}')
         elif self.drag and not self.maximized:
-            self.root.geometry(f'+{event.x_root-self.drag[0]}+{event.y_root-self.drag[1]}')
+            x,y=event.x_root-self.drag[0],event.y_root-self.drag[1]
+            if self.native_frame is not None:
+                self.native_frame.move(x,y)
+            else:
+                self.root.geometry(f'{x:+d}{y:+d}')
     def release(self,event):
         x,y=self.original(event)
         button=self.pressed

@@ -56,3 +56,9 @@ class ManagedFrameTests(unittest.TestCase):
         frame._dispatch(99,0x0082,0,0,123,0)
         self.assertNotIn(99,frame.handles)
         frame.comctl32.RemoveWindowSubclass.assert_called_once_with(99,frame.callback,123)
+
+    def test_move_preserves_size_and_focus_with_negative_coordinates(self):
+        frame=self.frame()
+        with patch.object(desktop,'window_handle',return_value=99):
+            frame.move(-240,-30)
+        frame.user32.SetWindowPos.assert_called_once_with(99,None,-240,-30,0,0,0x15)

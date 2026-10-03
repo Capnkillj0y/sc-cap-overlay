@@ -35,6 +35,18 @@ class WindowsWindowLifecycleTests(unittest.TestCase):
                 pump();hwnd=window_handle(app.root)
                 eligible(hwnd)
                 self.assertTrue(user.IsWindowVisible(hwnd))
+                from types import SimpleNamespace
+                surface=app.glass_surface
+                background=surface.background
+                surface.drag=(15,15)
+                for x,y in ((100,100),(-100,100),(100,-20),(240,160)):
+                    surface.drag_motion(SimpleNamespace(x_root=x+15,y_root=y+15))
+                    pump()
+                    self.assertEqual(surface.native_frame.position(),(x,y))
+                    self.assertTrue(user.IsWindowVisible(hwnd))
+                    self.assertEqual(window_handle(app.root),hwnd)
+                    self.assertIs(surface.background,background)
+                surface.drag=None
                 for _ in range(3):
                     app.glass_surface.minimize();pump()
                     self.assertEqual(window_handle(app.root),hwnd)
