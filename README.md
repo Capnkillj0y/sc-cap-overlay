@@ -1,3 +1,11 @@
+## v1.2.3 — Prevent duplicate launches
+
+Only one copy of the updated app can run per Windows login session, even when launched from different folders. A second launch displays an already-running message and exits before loading settings or starting OCR. The updater helper remains exempt. Windows releases the guard when the owning process ends, including after a crash.
+
+Close older builds before installing this release: versions before v1.2.3 do not participate in this guard. Includes the v1.2.2 Tactical Clean alerts and v1.2.1 taskbar changes.
+
+Windows verification: open the app, launch it again (also while minimized), confirm only the original remains. Close it and reopen. Test the regular update flow from this version on the next release.
+
 ## v1.2.2 — Tactical Clean alerts
 
 - Bundled Orbitron alert font with crisp dark edging and subtle highlights.

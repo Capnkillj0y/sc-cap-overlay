@@ -19,13 +19,20 @@ RUN
   python sc_capacitor_ocr.py
 """
 
-__version__ = "1.2.2"  # bump this before publishing each GitHub release
+__version__ = "1.2.3"  # bump this before publishing each GitHub release
 
 import sys
 # Run the separate replacement helper before loading OCR/Tk or the application.
 if __name__ == "__main__" and len(sys.argv) == 3 and sys.argv[1] == "--apply-update":
     from updater import apply_update
     raise SystemExit(apply_update(sys.argv[2]))
+
+# The updater helper above must run alongside the closing app.
+# Ordinary launches acquire the guard before loading settings, OCR, or Tk.
+if __name__ == "__main__":
+    from single_instance import enforce_single_instance
+    _instance_guard = enforce_single_instance()
+
 import os
 import re
 import json
