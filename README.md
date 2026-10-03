@@ -1,4 +1,14 @@
-# Glass Cockpit · v1.2.1
+## v1.2.2 — Tactical Clean alerts
+
+- Bundled Orbitron alert font with crisp dark edging and subtle highlights.
+- CAPACITOR LOW is yellow, CAPACITOR EMPTY is orange, and FLARE is red.
+- Previous default alert colors upgrade automatically; custom colors, calibration, hotkeys, and positions are preserved.
+- Live values, flashing, opacity, and preview controls remain available. Wide text windows expand to prevent clipping.
+- Includes the v1.2.1 taskbar fix and existing installer/update support.
+
+Before publishing the draft, check the three alerts over the game, calibration preview, and Windows minimize/restore. The Linux overlay checks passed; Windows behavior must be verified with the built EXE.
+
+# Glass Cockpit · v1.2.2
 
 ## Taskbar lifecycle fix in 1.2.1
 

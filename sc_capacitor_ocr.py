@@ -19,7 +19,7 @@ RUN
   python sc_capacitor_ocr.py
 """
 
-__version__ = "1.2.1"  # bump this before publishing each GitHub release
+__version__ = "1.2.2"  # bump this before publishing each GitHub release
 
 import sys
 # Run the separate replacement helper before loading OCR/Tk or the application.
@@ -152,6 +152,7 @@ def parse_hotkey(spec):
 
 
 from hotkeys import HotkeyManager
+from alert_style import render_alert, migrate_alert_colors, LOW_COLOR, EMPTY_COLOR, FLARE_COLOR
 
 
 # ---------------------------------------------------------------------------
@@ -179,8 +180,8 @@ DEFAULT_CONFIG = {
     "hotkey_test_flare": "ctrl+alt+t",
     "hotkey_ai_assist": "ctrl+alt+g",
     "alert_duration": 0,            # 0 = stays visible the whole time it's low; >0 = seconds then auto-hides
-    "alert_color_low": "#ffb238",    # amber -- shown when the reading is below threshold but not empty
-    "alert_color_empty": "#ff4438",  # red -- shown when the reading hits 0
+    "alert_color_low": LOW_COLOR,    # yellow -- shown when the reading is below threshold but not empty
+    "alert_color_empty": EMPTY_COLOR,  # orange -- shown when the reading hits 0
 }
 
 SIZE_MAP = {
@@ -261,6 +262,8 @@ def load_config():
         save_config(cfg)
         print("(migrated old config -- capacitor poll_hz bumped from 4 to 8)")
 
+    if migrate_alert_colors(cfg):
+        save_config(cfg)
     return cfg
 
 
@@ -2075,25 +2078,13 @@ class Overlay:
 
         if draggable:
             self.canvas.create_rectangle(1, 1, self.w - 1, self.h - 1,
-                                          outline=COLORS["line"], width=1)
-            self.canvas.create_text(self.w // 2, 18, text="drag me anywhere",
+                                          outline=COLORS["line"], width=1, tags="preview_frame")
+            self.canvas.create_text(self.w // 2, 18, text="drag me anywhere", tags="preview_hint",
                                      fill=COLORS["text_dim"], font=("Segoe UI", 8))
 
-        # No background panel on the real overlay -- fully transparent. Each
-        # piece of text (the warning word, a "-" separator, the reading) is
-        # built from three layers, back to front: a few offset copies in
-        # progressively darker shades of the alert color (giving the letters
-        # a sense of thickness/depth, like raised lettering), a thin dark
-        # edge for crispness, and the bright fill on top.
-        self.status_extrusion = [self.canvas.create_text(0, 0, text="", fill="black") for _ in EXTRUSION_STEPS]
-        self.status_outline = [self.canvas.create_text(0, 0, text="", fill="black") for _ in OUTLINE_OFFSETS]
-        self.status_main = self.canvas.create_text(0, 0, text="", fill="black")
-        self.sep_extrusion = [self.canvas.create_text(0, 0, text="", fill="black") for _ in EXTRUSION_STEPS]
-        self.sep_outline = [self.canvas.create_text(0, 0, text="", fill="black") for _ in OUTLINE_OFFSETS]
-        self.sep_main = self.canvas.create_text(0, 0, text="", fill="black")
-        self.pct_extrusion = [self.canvas.create_text(0, 0, text="", fill="black") for _ in EXTRUSION_STEPS]
-        self.pct_outline = [self.canvas.create_text(0, 0, text="", fill="black") for _ in OUTLINE_OFFSETS]
-        self.pct_main = self.canvas.create_text(0, 0, text="", fill="black")
+        self._alert_image = None
+        self._last_alert = ("", "", LOW_COLOR, False)
+        self._image_item = self.canvas.create_image(self.w // 2, self.h // 2)
         self.set_text_size(cfg.get("overlay_text_size", "medium"))
 
         self._place(cfg)
@@ -2172,15 +2163,8 @@ class Overlay:
     def set_text_size(self, size_key):
         self.cfg["overlay_text_size"] = size_key
         sizes = SIZE_MAP.get(size_key, SIZE_MAP["medium"])
-        self._label_font = ("Segoe UI", sizes["label"], "normal")
-        self._num_font = ("Segoe UI", sizes["number"], "normal")
-        for item in self.status_extrusion + self.status_outline + [self.status_main]:
-            self.canvas.itemconfig(item, font=self._label_font)
-        for item in self.sep_extrusion + self.sep_outline + [self.sep_main]:
-            self.canvas.itemconfig(item, font=self._label_font)
-        for item in self.pct_extrusion + self.pct_outline + [self.pct_main]:
-            self.canvas.itemconfig(item, font=self._num_font)
-        self._layout()
+        self._font_px = round(sizes["label"] * 4 / 3)
+        self._apply(*self._last_alert)
 
     def destroy(self):
         try:
@@ -2188,81 +2172,30 @@ class Overlay:
         except Exception:
             pass
 
-    def _place_group(self, extrusion_items, outline_items, main_item, cx, cy):
-        self.canvas.coords(main_item, cx, cy)
-        for item in outline_items:
-            self.canvas.coords(item, cx, cy)
-        for (offset, _shade_factor), item in zip(EXTRUSION_STEPS, extrusion_items):
-            self.canvas.coords(item, cx + offset, cy + offset)
-
-    def _color_group(self, extrusion_items, outline_items, main_item, fill, outline_fill, extrusion_base):
-        self.canvas.itemconfig(main_item, fill=fill)
-        for item in outline_items:
-            self.canvas.itemconfig(item, fill=outline_fill)
-        for (_offset, factor), item in zip(EXTRUSION_STEPS, extrusion_items):
-            self.canvas.itemconfig(item, fill=_shade(extrusion_base, factor) if extrusion_base != "black" else "black")
-
-    def _text_group(self, extrusion_items, outline_items, main_item, text):
-        self.canvas.itemconfig(main_item, text=text)
-        for item in outline_items:
-            self.canvas.itemconfig(item, text=text)
-        for item in extrusion_items:
-            self.canvas.itemconfig(item, text=text)
-
-    def _layout(self):
-        """Center label - number as one horizontal group, separated by a
-        plain '-' rather than a graphic divider."""
-        cy = self.h // 2
-        self.canvas.update_idletasks()
-        lb = self.canvas.bbox(self.status_main)
-        nb = self.canvas.bbox(self.pct_main)
-        sb = self.canvas.bbox(self.sep_main)
-        lw = (lb[2] - lb[0]) if lb else 0
-        nw = (nb[2] - nb[0]) if nb else 0
-        sw = (sb[2] - sb[0]) if sb else 0
-
-        if lw and nw:
-            gap = 10
-            total = lw + gap + sw + gap + nw
-            start = self.w // 2 - total / 2
-            label_cx = start + lw / 2
-            sep_cx = start + lw + gap + sw / 2
-            num_cx = start + lw + gap + sw + gap + nw / 2
-        else:
-            label_cx, sep_cx, num_cx = self.w // 2, -50, -50
-
-        self._place_group(self.status_extrusion, self.status_outline, self.status_main, label_cx, cy)
-        self._place_group(self.sep_extrusion, self.sep_outline, self.sep_main, sep_cx, cy)
-        self._place_group(self.pct_extrusion, self.pct_outline, self.pct_main, num_cx, cy)
-
     def _apply(self, label, sub, color, visible):
-        if visible:
-            fill, outline_fill, extrusion_base = color, "#04070a", color
-            label_out = label
-            sep_out = "-" if (label and sub) else ""
-            sub_out = sub
-        else:
-            fill = outline_fill = extrusion_base = "black"
-            # All three pieces of text must actually be emptied here, not just
-            # recolored. Leaving the number's real text content in place while
-            # only changing its color meant _layout() (which measures text
-            # width to center everything) saw a zero-width label but a
-            # nonzero-width number every "off" blink frame, and forcibly
-            # knocked the number off to the side (-50) as a result -- then
-            # snapped it straight back on the very next "on" frame. That
-            # repeated jump, on every single blink, is what showed up as the
-            # letters visibly moving/flickering.
-            label_out = ""
-            sep_out = ""
-            sub_out = ""
-
-        self._text_group(self.status_extrusion, self.status_outline, self.status_main, label_out)
-        self._text_group(self.sep_extrusion, self.sep_outline, self.sep_main, sep_out)
-        self._text_group(self.pct_extrusion, self.pct_outline, self.pct_main, sub_out)
-        self._color_group(self.status_extrusion, self.status_outline, self.status_main, fill, outline_fill, extrusion_base)
-        self._color_group(self.sep_extrusion, self.sep_outline, self.sep_main, fill, outline_fill, extrusion_base)
-        self._color_group(self.pct_extrusion, self.pct_outline, self.pct_main, fill, outline_fill, extrusion_base)
-        self._layout()
+        self._last_alert = (label, sub, color, visible)
+        if not visible:
+            self.canvas.itemconfigure(self._image_item, state="hidden")
+            return
+        text = label + ("  -  " + sub if label and sub else "")
+        bitmap = render_alert(text, color, self._font_px)
+        # Grow for the wide typeface; never clip large text or the live value.
+        required = max(self.w, render_alert("CAPACITOR EMPTY  -  99999", color, self._font_px).width + 32, bitmap.width + 32)
+        if required != self.w:
+            old_w = self.w
+            self.w = required
+            self.canvas.configure(width=self.w)
+            if self.draggable:
+                self.canvas.coords("preview_frame", 1, 1, self.w - 1, self.h - 1)
+                self.canvas.coords("preview_hint", self.w // 2, 18)
+            self.win.geometry(f"{self.w}x{self.h}")
+            if not self.draggable:
+                self._place(self.cfg)
+            else:
+                self.win.geometry(f"+{self.win.winfo_x() + (old_w-self.w)//2}+{self.win.winfo_y()}")
+        self._alert_image = ImageTk.PhotoImage(bitmap, master=self.canvas)
+        self.canvas.coords(self._image_item, self.w // 2, self.h // 2)
+        self.canvas.itemconfigure(self._image_item, image=self._alert_image, state="normal")
 
     def preview(self, label, sub, color):
         """Static preview for the calibration wizard -- no blinking, no
@@ -2284,9 +2217,9 @@ class Overlay:
         if not confirmed:
             phase, color, label = "nominal", COLORS["cyan"], ""
         elif val <= 0:
-            phase, color, label = "empty", self.cfg.get("alert_color_empty", COLORS["red"]), "CAPACITOR EMPTY"
+            phase, color, label = "empty", self.cfg.get("alert_color_empty", EMPTY_COLOR), "CAPACITOR EMPTY"
         else:
-            phase, color, label = "low", self.cfg.get("alert_color_low", COLORS["amber"]), "CAPACITOR LOW"
+            phase, color, label = "low", self.cfg.get("alert_color_low", LOW_COLOR), "CAPACITOR LOW"
 
         # alert-duration: once confirmed-low starts, optionally auto-hide
         # after N seconds so it doesn't sit on screen indefinitely. Resets
@@ -2334,16 +2267,8 @@ class FlareOverlay:
         self.win.geometry(f"{self.w}x{self.h}+{x}+{y}")
         canvas = tk.Canvas(self.win, width=self.w, height=self.h, bg="black", highlightthickness=0)
         canvas.pack(fill="both", expand=True)
-        # Dark edge and warm extrusion keep the command readable against both
-        # space and bright planetary backgrounds.
-        for ox, oy in ((4, 4), (3, 3), (2, 2)):
-            canvas.create_text(self.w // 2 + ox, self.h // 2 + oy, text="FLARE",
-                               fill="#5b100d", font=("Segoe UI", 54, "bold"))
-        for ox, oy in OUTLINE_OFFSETS:
-            canvas.create_text(self.w // 2 + ox, self.h // 2 + oy, text="FLARE",
-                               fill="#120303", font=("Segoe UI", 54, "bold"))
-        canvas.create_text(self.w // 2, self.h // 2, text="FLARE", fill=COLORS["red"],
-                           font=("Segoe UI", 54, "bold"))
+        self._alert_image = ImageTk.PhotoImage(render_alert("FLARE", FLARE_COLOR, 72), master=canvas)
+        canvas.create_image(self.w // 2, self.h // 2, image=self._alert_image)
         self.win.withdraw()
         self.visible = False
         self.win.after(50, make_clickthrough, self.win)

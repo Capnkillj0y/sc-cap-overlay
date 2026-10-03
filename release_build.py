@@ -48,6 +48,7 @@ def main():
              '--name','SC_Capacitor_Overlay','--icon','sc_capacitor.ico','--hidden-import','missile_ai','--hidden-import','glass_skin','--hidden-import','updater']
         for name in ('sc_capacitor.ico','sc_capacitor_icon.png','glass_cockpit_skin.png','update_config.json','missile_template.png','inbound_template.png','missile_word_template.png'):
             cmd+=['--add-data',name+';.']
+        cmd += ['--add-data', 'assets/Orbitron.ttf;assets', '--add-data', 'assets/Orbitron-OFL.txt;assets']
         subprocess.run(cmd+['sc_capacitor_ocr.py'],check=True)
         exe=Path('dist')/ASSET
         if not exe.is_file(): raise RuntimeError('Build did not produce the release executable.')
