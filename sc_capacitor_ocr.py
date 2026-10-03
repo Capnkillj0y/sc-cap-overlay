@@ -19,7 +19,7 @@ RUN
   python sc_capacitor_ocr.py
 """
 
-__version__ = "1.2.0"  # bump this before publishing each GitHub release
+__version__ = "1.2.1"  # bump this before publishing each GitHub release
 
 import sys
 # Run the separate replacement helper before loading OCR/Tk or the application.
@@ -2372,6 +2372,8 @@ class App:
         from desktop_window import prepare_app_identity, install_icon
         prepare_app_identity()
         self.root = tk.Tk()
+        if os.name == 'nt':
+            self.root.withdraw()  # Configure custom chrome before the first visible map.
         self.root.title(f"SC Capacitor Overlay v{__version__}")
         install_icon(self.root, bundled_resource)
         refresh_installed_version(__version__)

@@ -1,4 +1,23 @@
-# Glass Cockpit · v1.2.0
+# Glass Cockpit · v1.2.1
+
+## Taskbar lifecycle fix in 1.2.1
+
+The main window now stays Windows-managed throughout startup, minimize and
+restore. Its custom Glass Cockpit frame is drawn without switching Tk between
+normal and override-redirect modes. Removed the repeated native hide/show calls
+from Map events. Rounded corners, the Flight icon, settings and the installer
+remain in place.
+
+Validation: 23 local automated tests passed. A Windows-only regression test is
+included in the existing GitHub test step; it checks native window styles,
+three minimize/restore cycles, stable window identity and calibration hide/show.
+The actual Explorer taskbar button still needs manual review on Windows:
+
+1. Start v1.2.1 from the desktop shortcut; confirm its taskbar icon appears immediately.
+2. Minimize using the app's minus button; confirm the taskbar icon remains.
+3. Click the taskbar icon to restore, then repeat three times.
+4. Minimize/restore with the taskbar and check calibration then cancel.
+5. Confirm the Flight icon and rounded Glass Cockpit frame are preserved.
 
 ## Windows installer in 1.2.0
 

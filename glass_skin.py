@@ -1,5 +1,4 @@
 """Textured Glass Cockpit controller. Artwork is static; every value/control is live."""
-import ctypes
 import json
 import math
 import os
@@ -296,7 +295,12 @@ class Surface:
         self.canvas.bind('<ButtonRelease-1>',self.release)
         self.canvas.bind('<Double-Button-1>',self.double_click)
         self.root.bind('<Alt-F4>',lambda e:app.on_close())
-        self.root.overrideredirect(True)
+        self.native_frame=None
+        if os.name=='nt':
+            from desktop_window import ManagedWindowFrame
+            self.native_frame=ManagedWindowFrame(self.root)
+        else:
+            self.root.overrideredirect(True)
         self.root.minsize(860,534)
         width=min(1280,self.root.winfo_screenwidth()-60)
         height=round(width*890/1436)
@@ -305,43 +309,14 @@ class Surface:
             width=round(height*1436/890)
         self.root.geometry(f'{width}x{height}+40+40')
         self.root.bind('<Map>',self.mapped,add='+')
-        self._minimizing=False
     def mapped(self,event):
         if event.widget!=self.root: return
-        if self._minimizing: return  # minimize() is deliberately going native right now -- let it finish
-        self.root.overrideredirect(True)
+        if self.native_frame is not None:
+            self.native_frame.attach()
+        else:
+            self.root.overrideredirect(True)
         self._region_key=None
         self.schedule_layout()
-        if os.name=='nt':
-            try:
-                # GetParent (used here before) can return an inner wrapper
-                # window, an owner window, or nothing useful, depending on
-                # exactly how Tk nests its windows on Windows -- not
-                # reliably the real top-level window the taskbar cares
-                # about. GetAncestor(hwnd, GA_ROOT), via this same file's
-                # own window_handle() helper (already proven correct --
-                # it's what the rounded-corner window region uses), is the
-                # actual documented way to get that window. Applying the
-                # WS_EX_APPWINDOW fix-up to the wrong handle would silently
-                # do nothing, leaving the real window without a taskbar
-                # entry even while fully open.
-                from desktop_window import window_handle
-                user32=ctypes.windll.user32
-                hwnd=window_handle(self.root)
-                style=user32.GetWindowLongW(ctypes.c_void_p(hwnd),-20)
-                user32.SetWindowLongW(ctypes.c_void_p(hwnd),-20,(style|0x40000)&~0x80)
-                # Explorer mainly decides taskbar eligibility at the moment
-                # a window goes from hidden to shown, not from a live style
-                # change on a window that's already visible -- which is why
-                # alt-tabbing to it (itself a visibility/activation change)
-                # made a taskbar button appear when nothing else did. Force
-                # that same hidden->shown transition ourselves right after
-                # fixing the style, instead of waiting for some unrelated
-                # event to incidentally trigger Explorer to re-check.
-                SW_HIDE,SW_SHOW=0,5
-                user32.ShowWindow(ctypes.c_void_p(hwnd),SW_HIDE)
-                user32.ShowWindow(ctypes.c_void_p(hwnd),SW_SHOW)
-            except (OSError,AttributeError): pass
     def xy(self,x,y):
         return ((x-50)*self.scale+self.offset[0],(y-82)*self.scale+self.offset[1])
     def original(self,event):
@@ -378,18 +353,6 @@ class Surface:
             from desktop_window import window_handle, set_rounded_region
             try:
                 hwnd=window_handle(self.root)
-                # Re-assert the taskbar-visibility fix on every layout pass,
-                # using this SAME freshly-fetched handle, not just once in
-                # mapped(). overrideredirect() can recreate the native
-                # window; if that happens between mapped()'s own handle
-                # lookup and this one, mapped()'s fix would land on a
-                # handle that's no longer the current window -- which would
-                # show a correct taskbar entry for a moment, then lose it
-                # the instant layout() runs and starts operating on the
-                # real (different) one instead.
-                user32=ctypes.windll.user32
-                style=user32.GetWindowLongW(ctypes.c_void_p(hwnd),-20)
-                user32.SetWindowLongW(ctypes.c_void_p(hwnd),-20,(style|0x40000)&~0x80)
                 left,top=map(round,self.offset)
                 bounds=(left,top,left+size[0],top+size[1])
                 key=(hwnd,bounds,radius)
@@ -461,35 +424,10 @@ class Surface:
         x,y=self.original(event)
         if y<125 and x<1250: self.maximize()
     def minimize(self):
-        from desktop_window import clear_region
-        clear_region(self.root)
-        self._region_key=None
-        # mapped() unconditionally flips overrideredirect back to True on
-        # every single <Map> event -- including the one this very call is
-        # about to trigger. Without this flag the two fight each other: we
-        # go native here so Windows can minimize properly, mapped() sees
-        # the resulting <Map> and immediately reverts to the custom
-        # chrome-less mode, and the half-finished window in between just
-        # disappears instead of minimizing. Suppress that reversal for the
-        # duration of this specific transition.
-        self._minimizing=True
-        self.root.overrideredirect(False)
-        done=[False]
-        bind_id=[None]
-        def do_iconify(event=None):
-            if done[0]: return
-            if event is not None and event.widget is not self.root: return
-            done[0]=True
-            if bind_id[0] is not None:
-                self.root.unbind('<Map>',bind_id[0])  # one-shot: don't accumulate a new handler every minimize
-            self._minimizing=False
-            self.root.iconify()
-        # Wait for Windows to actually confirm the native-decorated window
-        # is mapped and ready, rather than guessing a fixed delay -- a
-        # fallback timer covers the unlikely case <Map> never fires so the
-        # window can't get stuck mid-transition.
-        bind_id[0]=self.root.bind('<Map>',do_iconify,add='+')
-        self.root.after(250,do_iconify)
+        # Windows keeps the same managed HWND and taskbar entry while iconic.
+        if self.native_frame is None:
+            self.root.overrideredirect(False)
+        self.root.iconify()
     def maximize(self):
         if self.maximized:
             self.root.geometry(self.normal_geometry)
@@ -541,4 +479,8 @@ def build(app,module):
     app.update_status_label=Label(s,1000,105,'',12,DIM,anchor='e')
     s.ready=True
     app.root.update_idletasks()
+    if s.native_frame is not None:
+        # Configure taskbar styles while hidden, before the first shell map.
+        s.native_frame.attach()
+        app.root.deiconify()
     s.layout()

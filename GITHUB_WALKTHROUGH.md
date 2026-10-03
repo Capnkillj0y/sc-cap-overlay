@@ -1,6 +1,6 @@
-# Publish SC Capacitor Overlay v1.2.0
+# Publish SC Capacitor Overlay v1.2.1
 
-This version adds a Windows installer and central settings storage. The Flight
+This version fixes taskbar window handling and retains the installer and central settings storage. The Flight
 icon, rounded window, keyboard fix and automatic updates are included.
 
 ## Update your existing GitHub repository
@@ -9,12 +9,12 @@ icon, rounded window, keyboard fix and automatic updates are included.
 2. In GitHub Desktop, choose **Repository → Show in Explorer**.
 3. Copy the extracted inner app folder's contents into that repository folder.
    Replace existing files. Include `.github`, `installer`, `assets`, and `tests`.
-4. In Desktop, enter **Add Windows installer and centralized settings** in Summary.
+4. In Desktop, enter **Fix taskbar visibility and minimize behavior** in Summary.
 5. Click **Commit to main** (or your branch name), then **Push origin**.
 6. On the GitHub website, open **Actions → Build Windows release → Run workflow**.
 7. Wait for a green check. The Windows runner tests the EXE, installer, shortcuts,
    settings migration, reinstall, and data preservation after uninstall.
-8. Open **Code → Releases → v1.2.0 draft**.
+8. Open **Code → Releases → v1.2.1 draft**.
 
 Do not rerun a successful build for the same version while its release exists.
 Use a new version for another release, or delete an unpublished failed draft
@@ -28,7 +28,7 @@ before retrying that version.
 4. If your settings still live beside your old EXE, choose that old folder on
    **Keep your existing settings**. Otherwise leave this optional field blank.
 5. Keep **Create a desktop shortcut** checked if you want one, then install.
-6. Launch from the new shortcut. Confirm the Flight icon and version 1.2.0.
+6. Launch from the new shortcut. Confirm the Flight icon and version 1.2.1.
 7. Confirm calibration, hotkeys and AI data survived the import. Test monitoring.
 8. Check minimize/restore, the rounded corners and the UPDATES button.
 9. Open **SC Capacitor Settings Folder** from Start to inspect the data location.
